@@ -1,0 +1,62 @@
+- name: etcd service
+  systemd: enabled=no state=stopped name=etcd
+  tags: etcd_conf
+  ignore_errors: yes
+
+- name: group for etcd
+  group: name=etcd state=present
+  tags: etcd_conf
+
+- name: user for etcd
+  user: name=etcd home=/var/lib/etcd comment="etcd system user" shell=/bin/false system=yes state=present
+  tags: etcd_conf
+
+- name: create /etc/etcd, /var/lib/etcd, /tmp/etcd
+  file: name="{{ item }}" state=directory owner=etcd group=etcd mode=0750
+  with_items:
+    - /etc/etcd
+    - /var/lib/etcd
+    - /tmp/etcd
+  tags: etcd_conf
+
+- name: Extract archive
+  unarchive:
+    remote_src: yes
+    src: https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/etcd-{{ etcd_version }}-linux-amd64.tar.gz
+    dest: /tmp/etcd
+    extra_opts: [--strip-components=1]
+  tags: etcd_conf
+
+- name: install etcd in place
+  copy: src="{{ item }}" dest=/usr/bin remote_src=yes
+  with_items:
+    - /tmp/etcd/etcd
+    - /tmp/etcd/etcdctl
+  tags: etcd_conf
+
+- name: fix permissions /usr/bin/etcd
+  file: path=/usr/bin/etcd owner=root group=root mode=0755
+- name: fix permissions /usr/bin/etcdctl
+  file: path=/usr/bin/etcdctl owner=root group=root mode=0755
+
+- name: install template
+  template:
+    src: templates/etcd.conf.yml.j2
+    dest: /etc/etcd/etcd.conf.yml
+    owner: etcd
+    group: etcd
+    mode: 0600
+  tags: etcd_conf
+
+- name: install template2
+  template:
+    src: templates/service.j2
+    dest: /lib/systemd/system/etcd.service
+    owner: root
+    group: root
+    mode: 0600
+  tags: etcd_conf
+
+- name: etcd service
+  systemd: daemon_reload=yes enabled=yes state=started name=etcd
+  tags: etcd_conf

@@ -1,0 +1,23 @@
+- name: install rabbit
+  apt: name=rabbitmq-server state=present
+  tags: rabbit_conf
+
+- name: rabbitmqctl stop_app
+  shell: rabbitmqctl stop_app
+  tags: rabbit_conf
+
+- name: rabbitmqctl reset
+  shell: rabbitmqctl reset
+  tags: rabbit_conf
+
+- name: rabbitmqctl start_app
+  shell: rabbitmqctl start_app
+  tags: rabbit_conf
+
+- name: config rabbit user
+  shell: rabbitmqctl add_user openstack "{{ rabbit_password }}"
+  tags: rabbit_conf
+
+- name: config rabbit
+  shell: rabbitmqctl set_permissions openstack ".*" ".*" ".*"
+  tags: rabbit_conf

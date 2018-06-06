@@ -1,0 +1,3 @@
+- name: install and configure nova-compute
+  import_tasks: nova-compute.yml
+  tags: nova-compute_conf

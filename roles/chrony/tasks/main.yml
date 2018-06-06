@@ -1,0 +1,8 @@
+- name: chrony client
+  import_tasks: chrony_client.yml
+  when: chrony_mode == "client"
+  tags: chrony_conf_client
+- name: chrony server
+  import_tasks: chrony_server.yml
+  when: chrony_mode == "server"
+  tags: chrony_conf_server

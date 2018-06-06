@@ -1,0 +1,22 @@
+---
+- name: "generate /etc/hosts.ansible file"
+  template: "src=templates/hosts.j2 dest=/etc/hosts.ansible owner=root group=root mode=0644"
+  register: etc_hosts_ansible
+  tags: etc_hosts
+
+
+- name: "check if debian generated hosts file has a backup"
+  stat: "path=/etc/hosts.debian"
+  register: etc_hosts_debian
+  tags: etc_hosts
+
+- name: "backup debian generated /etc/hosts"
+  command: "cp /etc/hosts /etc/hosts.debian"
+  when: etc_hosts_debian.stat.isreg is not defined
+  tags: etc_hosts
+
+
+- name: "install /etc/hosts.ansible file"
+  command: "cp /etc/hosts.ansible /etc/hosts"
+#  when: etc_hosts_ansible.stat.isLink is not defined
+  tags: etc_hosts

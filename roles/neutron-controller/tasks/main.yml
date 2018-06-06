@@ -1,0 +1,3 @@
+- name: install and configure neutron on controller
+  import_tasks: neutron-controller.yml
+  tags: neutron-controller_conf

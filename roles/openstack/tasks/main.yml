@@ -1,0 +1,3 @@
+- name: install and configure openstack client
+  import_tasks: openstack.yml
+  tags: openstack_conf

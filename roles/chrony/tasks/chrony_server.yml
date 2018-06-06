@@ -1,0 +1,33 @@
+---
+- name: install chrony
+  package:
+    name: chrony
+    state: present
+
+
+- name: "generate /etc/chrony/chrony.conf.ansible file"
+  template: "src=templates/chrony_server.j2 dest=/etc/chrony/chrony.conf.ansible owner=root group=root mode=0644"
+  tags: chrony_conf_server
+
+
+- name: "check if debian generated /etc/chrony/chrony.conf file has a backup"
+  stat: "path=/etc/chrony/chrony.conf.debian"
+  tags: chrony_conf_server
+  register: chrony_conf_debian
+
+- name: "backup debian generated /etc/chrony.conf"
+  command: "cp /etc/chrony/chrony.conf /etc/chrony/chrony.conf.debian"
+  when: chrony_conf_debian.stat.islnk is not defined
+  tags: chrony_conf_server
+
+
+- name: "install /etc/hosts.ansible file"
+  command: "cp /etc/chrony/chrony.conf.ansible /etc/chrony/chrony.conf"
+  tags: chrony_conf_server
+
+
+- name: "refresh chrony service"
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: chrony

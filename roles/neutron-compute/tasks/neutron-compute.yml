@@ -1,0 +1,29 @@
+- name: install packages
+  apt: name="{{ item }}" state=present
+  with_items:
+    - neutron-linuxbridge-agent
+  tags: neutron-compute_conf
+
+- name: ml2 config
+  template: "src=templates/ml2.j2 dest=/etc/neutron/ml2/ml2_conf.ini owner=root group=root mode=0644"
+  notify:
+    - restart neutron-linuxbridge-agent
+
+- name: neutron.conf config
+  template: "src=templates/neutron.conf.j2 dest=/etc/neutron/neutron.conf owner=root group=root mode=0644"
+
+- sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+  tags: neutron-compute_conf
+
+- sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+  tags: neutron-compute_conf

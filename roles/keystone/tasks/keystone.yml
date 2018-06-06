@@ -1,0 +1,53 @@
+- name: create keystone db
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DROP DATABASE IF EXISTS keystone;
+    - CREATE DATABASE IF NOT EXISTS keystone;
+    - GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY '{{keystone_dbpass}}';
+    - GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '{{keystone_dbpass}}';
+  tags: keystone_conf
+- name: install keystone apache2 libapache2-mod-wsgi
+  apt: name="{{ item }}" state=present
+  with_items:
+    - keystone
+    - apache2
+    - libapache2-mod-wsgi
+  tags: keystone_conf
+
+- name: keystone config
+  template: src=templates/keystone.conf.j2 dest=/etc/keystone/keystone.conf mode=0640 owner=keystone group=keystone
+  tags: keystone_conf
+
+- name: keystone environment
+  template: src=templates/admin-rc.j2 dest=/etc/keystone/admin-rc owner=root group=root mode=0600
+  tags: keystone_conf
+
+- name: keystone demo environment
+  template: src=templates/demo-rc.j2 dest=/etc/keystone/demo-rc owner=root group=root mode=0600
+  tags: keystone_conf
+
+- name: populate db
+  command: 'keystone-manage db_sync'
+  become_user: keystone
+  tags: keystone_conf
+
+- name: keystone config commands
+  shell: "{{ item }}"
+  with_items:
+    - keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
+    - keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+    - keystone-manage bootstrap --bootstrap-password "{{ admin_pass }}" --bootstrap-admin-url http://{{ ansible_hostname }}:5000/v3/ --bootstrap-internal-url http://{{ansible_hostname}}:5000/v3/ --bootstrap-public-url http://{{ansible_hostname}}:5000/v3/ --bootstrap-region-id RegionOne
+    #- . /etc/keystone/admin-rc && openstack domain create --description "An Example Domain" example
+    - . /etc/keystone/admin-rc && openstack project create --domain default --description "Service Project" service
+    - . /etc/keystone/admin-rc && openstack project create --domain default --description "Demo Project" demo
+    - . /etc/keystone/admin-rc && openstack user create --domain default --password {{ demo_pass }} demo
+    - . /etc/keystone/admin-rc && openstack role create user
+    - . /etc/keystone/admin-rc && openstack role add --project demo --user demo user
+
+  tags: keystone_conf
+
+- name: apache2 ServerName
+  lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^ServerName" line="ServerName \"{{ansible_hostname}}\"" state=present
+  notify:
+    - restart apache2
+  tags: keystone_conf

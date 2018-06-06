@@ -1,0 +1,12 @@
+- name: "restart nova-api"
+  systemd: state=restarted daemon_reload=yes name=nova-api
+- name: "restart neutron-server"
+  systemd: state=restarted daemon_reload=yes name=neutron-server
+- name: "restart neutron-linuxbridge-agent"
+  systemd: state=restarted daemon_reload=yes name=neutron-linuxbridge-agent
+- name: "restart neutron-dhcp-agent restart"
+  systemd: state=restarted daemon_reload=yes name=neutron-dhcp-agent
+- name: "restart neutron-metadata-agent restart"
+  systemd: state=restarted daemon_reload=yes name=neutron-metadata-agent
+- name: "restart neutron-l3-agent restart"
+  systemd: state=restarted daemon_reload=yes name=neutron-l3-agent

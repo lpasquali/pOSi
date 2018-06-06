@@ -1,0 +1,8 @@
+#{{ ansible_managed }}
+export OS_USERNAME=demo
+export OS_PASSWORD={{ demo_pass }}
+export OS_PROJECT_NAME=demo
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_AUTH_URL=http://{{ansible_hostname}}:5000/v3
+export OS_IDENTITY_API_VERSION=3

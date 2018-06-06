@@ -1,0 +1,83 @@
+- name: create nova db
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DROP DATABASE IF EXISTS nova_api;
+    - DROP DATABASE IF EXISTS nova;
+    - DROP DATABASE IF EXISTS nova_cell0;
+    - CREATE DATABASE IF NOT EXISTS nova_api;
+    - CREATE DATABASE IF NOT EXISTS nova;
+    - CREATE DATABASE IF NOT EXISTS nova_cell0;
+    - GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'localhost' IDENTIFIED BY '{{nova_dbpass}}';
+    - GRANT ALL PRIVILEGES ON nova_api.* TO 'nova'@'%' IDENTIFIED BY '{{nova_dbpass}}';
+    - GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' IDENTIFIED BY '{{nova_dbpass}}';
+    - GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'%' IDENTIFIED BY '{{nova_dbpass}}';
+    - GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'localhost' IDENTIFIED BY '{{nova_dbpass}}';
+    - GRANT ALL PRIVILEGES ON nova_cell0.* TO 'nova'@'%' IDENTIFIED BY '{{nova_dbpass}}';
+  when: nova_mode == "controller"
+  tags: nova_conf
+
+
+- name: run nova config commands
+  shell: '{{ item }}'
+  with_items:
+    - . /etc/keystone/admin-rc && openstack user create --domain default --password={{nova_dbpass}} nova
+    - . /etc/keystone/admin-rc && openstack role add --project service --user nova admin
+    - . /etc/keystone/admin-rc && openstack service create --name nova --description "OpenStack Compute" compute
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne compute public http://{{ansible_hostname}}:8774/v2.1
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne compute internal http://{{ansible_hostname}}:8774/v2.1
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne compute admin http://{{ansible_hostname}}:8774/v2.1
+    - . /etc/keystone/admin-rc && openstack user create --domain default --password={{placement_pass}} placement
+    - . /etc/keystone/admin-rc && openstack role add --project service --user placement admin
+    - . /etc/keystone/admin-rc && openstack service create --name placement --description "Placement API" placement
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne placement public http://{{ansible_hostname}}:8778
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne placement internal http://{{ansible_hostname}}:8778
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne placement admin http://{{ansible_hostname}}:8778
+  when: nova_mode == "controller"
+  tags: nova_conf
+  ignore_errors: yes
+
+- name: install packages
+  apt: name="{{ item }}" state=present
+  with_items:
+    - nova-api
+    - nova-conductor
+    - nova-consoleauth
+    - nova-novncproxy
+    - nova-scheduler
+    - nova-placement-api
+  tags: nova_conf
+  when: nova_mode == "controller"
+
+- name: nova config
+  template: "src=templates/nova.conf.j2 dest=/etc/nova/nova.conf owner=root group=root mode=0644"
+  when: nova_mode == "controller"
+
+- name: populate nova api db
+  command: 'nova-manage api_db sync'
+  become_user: nova
+  when: nova_mode == "controller"
+
+- name: register cell0 database
+  command: 'nova-manage cell_v2 map_cell0'
+  become_user: nova
+  when: nova_mode == "controller"
+
+- name: create cell1 database
+  command: 'nova-manage cell_v2 create_cell --name=cell1 --verbose'
+  become_user: nova
+  when: nova_mode == "controller"
+
+- name: populate the nova database
+  command: 'nova-manage db sync'
+  become_user: nova
+  when: nova_mode == "controller"
+
+- name: check if cell0 and cell1 are working
+  command: 'nova-manage cell_v2 list_cells'
+  notify:
+    - restart nova-api
+    - restart nova-consoleauth
+    - restart nova-scheduler
+    - restart nova-conductor
+    - restart nova-novncproxy
+  when: nova_mode == "controller"

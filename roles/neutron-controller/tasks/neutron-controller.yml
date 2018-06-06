@@ -1,0 +1,74 @@
+- name: create neutron db
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DROP DATABASE IF EXISTS neutron;
+    - CREATE DATABASE IF NOT EXISTS neutron;
+    - GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'localhost' IDENTIFIED BY '{{neutron_dbpass}}';
+    - GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY '{{neutron_dbpass}}';
+  tags: neutron-controller_conf
+
+- name: run neutron config commands
+  shell: '{{ item }}'
+  with_items:
+    - . /etc/keystone/admin-rc && openstack user create --domain default --password '{{neutron_dbpass}}' neutron
+    - . /etc/keystone/admin-rc && openstack role add --project service --user neutron admin
+    - . /etc/keystone/admin-rc && openstack service create --name neutron --description "OpenStack Networking" network
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne network public http://{{ansible_hostname}}:9696
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne network internal http:/{{ansible_hostname}}:9696
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne network admin http://{{ansible_hostname}}:9696
+  tags: neutron-controller_conf
+  ignore_errors: yes
+
+- name: install packages
+  apt: name="{{ item }}" state=present
+  with_items:
+    - neutron-server
+    - neutron-plugin-ml2
+    - neutron-linuxbridge-agent
+    - neutron-l3-agent
+    - neutron-dhcp-agent
+    - neutron-metadata-agent
+  tags: neutron-controller_conf
+
+- sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+    tags: neutron-controller_conf
+
+- sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+    tags: neutron-controller_conf
+
+- name: dhcp_agent config
+  template: "src=templates/dhcp_agent.ini.j2 dest=/etc/neutron/dhcp_agent.ini owner=root group=root mode=0644"
+
+- name: l3_agent config
+  template: "src=templates/l3_agent.ini.j2 dest=/etc/neutron/l3_agent.ini owner=root group=root mode=0644"
+
+- name: linuxbridge_agent config
+  template: "src=templates/linuxbridge_agent.ini.j2 dest=/etc/neutron/ml2/linuxbridge_agent.ini owner=root group=root mode=0644"
+
+- name: ml2 config
+  template: "src=templates/ml2.j2 dest=/etc/neutron/ml2/ml2_conf.ini owner=root group=root mode=0644"
+
+- name: neutron.conf config
+  template: "src=templates/neutron.conf.j2 dest=/etc/neutron/neutron.conf owner=root group=root mode=0644"
+
+- name: populate neutron
+  command: 'neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head'
+  become_user: neutron
+  notify:
+    - restart nova-api
+    - restart neutron-server
+    - restart neutron-linuxbridge-agent
+    - restart neutron-dhcp-agent
+    - restart neutron-metadata-agent
+    - restart neutron-l3-agent restart
+  tags: neutron-controller_conf

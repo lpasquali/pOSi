@@ -1,0 +1,11 @@
+admin_pass: 'supercazzola'
+rabbit_password: "{{ admin_pass }}"
+mysql_root_password: "{{ admin_pass }}"
+keystone_dbpass: "{{ admin_pass }}"
+glance_dbpass: "{{ admin_pass }}"
+nova_dbpass: "{{ admin_pass }}"
+neutron_dbpass: "{{ admin_pass }}"
+metadata_secret: "{{ admin_pass }}"
+placement_pass: "{{ admin_pass }}"
+etcd_version: 'v3.2.7'
+demo_pass: d3mop4ss

@@ -1,0 +1,3 @@
+- name: install and configure mariadb
+  import_tasks: mariadb.yml
+  tags: mariadb_conf

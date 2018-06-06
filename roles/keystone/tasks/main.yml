@@ -1,0 +1,3 @@
+- name: install and configure keystone
+  import_tasks: keystone.yml
+  tags: keystone_conf

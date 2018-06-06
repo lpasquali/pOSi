@@ -1,0 +1,24 @@
+- name: nova-compute package
+  apt: name=nova-compute state=present
+  tags: nova-compute_conf
+  when: nova_mode == "compute"
+
+- name: configure nova-compute
+  template: "src=templates/nova-compute.conf.j2 desc=/etc/nova/nova-compute.conf owner=root group=root mode=0644"
+  tags: nova-compute_conf
+  when: nova_mode == "compute"
+
+- name: cell database discover hosts
+  command: nova-manage cell_v2 discover_hosts --verbose
+  become_user: nova
+  when: nova_mode == "controller"
+  tags: nova-compute_conf
+- name: configure compute node on controller
+  shell: '{{ item }}'
+  with_items:
+    - . /etc/keystone/admin-rc && openstack compute service list --service nova-compute
+    - . /etc/keystone/admin-rc && openstack catalog list
+    - . /etc/keystone/admin-rc && openstack image list
+    - . /etc/keystone/admin-rc && nova-status upgrade check
+  when: nova_mode == "controller"
+  tags: nova-compute_conf

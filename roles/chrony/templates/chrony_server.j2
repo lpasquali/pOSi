@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+server 0.europe.pool.ntp.org iburst
+keyfile /etc/chrony/chrony.keys
+commandkey 1
+driftfile /var/lib/chrony/chrony.drift
+log tracking measurements statistics
+logdir /var/log/chrony
+maxupdateskew 100.0
+dumponexit
+dumpdir /var/lib/chrony
+logchange 0.5
+hwclockfile /etc/adjtime
+rtcsync
+allow {% print ansible_eth0.ipv4.network %}/{% print ansible_eth0.ipv4.netmask %}

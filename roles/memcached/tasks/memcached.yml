@@ -1,0 +1,22 @@
+- name: install memcached and python-memcache
+  apt: name="{{ item }}" state=present
+  with_items:
+    - python-memcache
+    - memcached
+  tags: memcached_conf
+
+- name: configure memcached
+  template:
+      src: etc/memcached.conf.j2
+      dest: /etc/memcached.conf
+      owner: root
+      group: root
+      mode: 0600
+  tags: memcached_conf
+
+- name: restart service memcached
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: memcached
+  tags: memcached_conf

@@ -1,0 +1,3 @@
+- name: install and configure neutron on compute nodes
+  import_tasks: neutron-compute.yml
+  tags: neutron-compute_conf

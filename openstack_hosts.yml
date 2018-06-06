@@ -1,0 +1,19 @@
+all:
+  children:
+    nodes:
+      children:
+        compute:
+          hosts:
+            openstack-compute01:
+            openstack-compute02:
+        storage:
+          hosts:
+            openstack-storage01:
+            openstack-storage02:
+        network:
+          hosts:
+            openstack-network01:
+            openstack-network02:
+    control:
+      hosts:
+        openstack-controller:

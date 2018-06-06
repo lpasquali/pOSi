@@ -1,0 +1,3 @@
+- name: install and configure glance
+  import_tasks: glance.yml
+  tags: glance_conf

@@ -1,0 +1,33 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: true
+  roles:
+    - configure-etc-hosts
+    - openstack
+
+- hosts: all:!control
+  become: true
+  roles:
+    - chrony
+  vars:
+    - chrony_mode: "client"
+
+- hosts: control
+  become: true
+  roles:
+    - chrony
+    - mariadb
+    - rabbit
+    - memcached
+    - etcd
+    - keystone
+    - glance
+    - nova
+  vars:
+    - chrony_mode: "server"
+
+- hosts: compute
+  become: true
+  roles:
+    - nova-compute

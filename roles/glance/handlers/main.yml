@@ -1,0 +1,4 @@
+- name: "restart glance-api"
+  systemd: state=restarted daemon_reload=yes name=glance-api
+- name: "restart glance-registry"
+  systemd: state=restarted daemon_reload=yes name=glance-registry

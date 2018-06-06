@@ -1,0 +1,3 @@
+- name: install and configure memcached
+  import_tasks: memcached.yml
+  tags: memcached_conf

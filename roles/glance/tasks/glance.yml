@@ -1,0 +1,39 @@
+- name: create glance db
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DROP DATABASE IF EXISTS glance;
+    - CREATE DATABASE IF NOT EXISTS glance;
+    - GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY '{{glance_dbpass}}';
+    - GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY '{{glance_dbpass}}';
+  tags: glance_conf
+
+- name: run glance config commands
+  shell: '{{ item }}'
+  with_items:
+    - . /etc/keystone/admin-rc && openstack user create --domain default --password {{glance_dbpass}} glance
+    - . /etc/keystone/admin-rc && openstack role add --project service --user glance admin
+    - . /etc/keystone/admin-rc && openstack service create --name glance --description "OpenStack Image" image
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne image public http://{{ansible_hostname}}:9292
+    - . /etc/keystone/admin-rc && openstack endpoint create --region RegionOne image internal http://{{ansible_hostname}}:9292
+  tags: glance_conf
+  ignore_errors: yes
+  
+- name: install glance
+  apt: name=glance state=present
+  tags: glance_conf
+
+- name: configure glance api
+  template: "src=templates/glance-api.conf.j2 dest=/etc/glance/glance-api.conf group=glance owner=glance mode=0600"
+  tags: glance_conf
+
+- name: configure glance registry
+  template: "src=templates/glance-registry.conf.j2 dest=/etc/glance/glance-registry.conf group=glance owner=glance mode=0600"
+  tags: glance_conf
+
+- name: populate glance
+  command: 'glance-manage db_sync'
+  become_user: glance
+  notify:
+    - restart glance-api
+    - restart glance-registry
+  tags: glance_conf

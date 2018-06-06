@@ -1,0 +1,24 @@
+---
+- name: install ubuntu cloud keyring
+  apt:
+    pkg: ubuntu-cloud-keyring
+    state: present
+  tags: openstack_conf
+
+- name: "install openstack packages"
+  apt:
+    name: software-properties-common
+    update_cache: yes
+  tags: openstack_conf
+
+- name: "add openstack repo"
+  apt_repository:
+    repo: "deb http://ubuntu-cloud.archive.canonical.com/ubuntu xenial-updates/queens main"
+    state: present
+  tags: openstack_conf
+
+- name: install openstack client
+  apt:
+    name: python-openstackclient
+    update_cache: yes
+  tags: openstack_conf
