@@ -1,0 +1,2 @@
+# pOSi
+plain openstack installation
